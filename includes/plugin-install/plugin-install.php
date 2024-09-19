@@ -149,13 +149,12 @@ class PluginInstall {
         $plugin_slug = sanitize_title($args->slug);
         $plugins = $this->fetch_plugins_from_api();
 
-        
-
         // Check if the requested plugin is one of your own
         foreach ($plugins as $plugin) {
 
             if (sanitize_title($plugin->slug) === $plugin_slug) {
                 // Return plugin information for your own plugin
+
 
                 return (object) [
                     'name' => $plugin->name,
@@ -197,13 +196,20 @@ class PluginInstall {
 
 
     private function format_plugin_data($plugin) {
+        // Remove 'wp-' prefix from the slug
+        $slug = sanitize_title($plugin['name']);
+        $slug = str_replace('wp-', '', $slug);
+
+        // Add target filename parameter to the download link
+        $download_link = add_query_arg('zipname', $slug, $plugin['download_link']);
+    
         return (object) [
             'name' => $this->format_plugin_name($plugin['name']),
-            'slug' => sanitize_title($plugin['name']),
+            'slug' => $slug,
             'version' => !empty($plugin['version']) ? $plugin['version'] : __('Unknown', 'benignware-connect'),
             'description' => $plugin['description'],
             'homepage' => $plugin['homepage'],
-            'download_link' => $plugin['download_link'],
+            'download_link' => $download_link,
             'author' => 'Benignware', // Adjust if needed
             'rating' => 0,
             'num_ratings' => 0,
@@ -212,6 +218,7 @@ class PluginInstall {
             'author_url' => $plugin['author_url'] ?? '' // Ensure author URL is included
         ];
     }
+    
 
 
     private function fetch_plugins_from_api() {

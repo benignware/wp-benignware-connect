@@ -30,15 +30,17 @@ class PluginUpdateManager {
             if ($this->is_benignware_plugin($plugin_data)) {
                 
                 $plugin_slug = sanitize_title($plugin_data['Name']);
+                $unprefixed_plugin_slug = str_replace('wp-', '', $plugin_slug);
                 $current_version = $plugin_data['Version'];
 
                 $update_info = $this->get_update_info('wp-' . $plugin_slug, $current_version);
 
                 if ($update_info && version_compare($update_info->version, $current_version, '>')) {
+                    $download_url = $this->build_download_url($update_info->download_url, $unprefixed_plugin_slug);
                     $plugin_update = new \stdClass();
                     $plugin_update->slug = $plugin_slug;
                     $plugin_update->new_version = $update_info->version;
-                    $plugin_update->package = $this->build_download_url($update_info->download_url);
+                    $plugin_update->package = $download_url;
                     $transient->response[$plugin_file] = $plugin_update;
                 }
             }
@@ -59,7 +61,8 @@ class PluginUpdateManager {
      * Get update information from the API.
      */
     private function get_update_info($slug, $current_version) {
-        $url = "{$this->hub_url}/packages/{$slug}/latest";
+        $unprefixed_slug = str_replace('wp-', '', $slug);
+        $url = "{$this->hub_url}/api/v1/packages/wp-{$unprefixed_slug}/latest";
 
         $license_key = get_option('benignware_license_key');
 
@@ -88,9 +91,13 @@ class PluginUpdateManager {
     /**
      * Build the download URL with the license key, if available.
      */
-    private function build_download_url($download_url) {
+    private function build_download_url($download_url, $zipname = null) {
         if (!empty($this->license_key)) {
             return add_query_arg('key', $this->license_key, $download_url);
+        }
+
+        if ($zipname !== null) {
+            $download_url = add_query_arg('zipname', $zipname, $download_url);
         }
 
         return $download_url;

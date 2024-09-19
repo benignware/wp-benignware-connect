@@ -29,15 +29,17 @@ class ThemeUpdateManager {
         foreach ($themes as $theme_slug => $theme) {
             // Only check themes authored by 'Rafael Nowrotek' or 'Benignware'
             if ($this->is_benignware_theme($theme)) {
+                $unprefixed_theme_slug = str_replace('wp-', '', sanitize_title($theme_slug));
                 $current_version = $theme->get('Version');
                 $update_info = $this->get_update_info($theme_slug, $current_version);
 
                 if ($update_info && version_compare($update_info->version, $current_version, '>')) {
+                    $download_url = $this->build_download_url($update_info->download_url, $unprefixed_theme_slug);
                     $theme_update = [
-                        'theme' => $theme_slug,
+                        'theme' => $unprefixed_theme_slug,
                         'new_version' => $update_info->version,
-                        'url' => $this->build_download_url($update_info->download_url),
-                        'package' => $this->build_download_url($update_info->download_url),
+                        'url' => $download_url,
+                        'package' => $download_url,
                     ];
                     $transient->response[$theme_slug] = $theme_update;
                 }
@@ -59,7 +61,8 @@ class ThemeUpdateManager {
      * Get update information from the API.
      */
     private function get_update_info($slug, $current_version) {
-        $url = "{$this->hub_url}/packages/{$slug}/latest";
+        $unprefixed_slug = str_replace('wp-', '', $slug);
+        $url = "{$this->hub_url}/api/v1/packages/wp-{$unprefixed_slug}/latest";
 
         // Add license key to the URL if available
         if (!empty($this->license_key)) {
@@ -77,15 +80,22 @@ class ThemeUpdateManager {
         }
 
         $response_body = json_decode(wp_remote_retrieve_body($response));
+
         return isset($response_body->version) ? $response_body : null;
     }
 
     /**
      * Build the download URL with the license key, if available.
      */
-    private function build_download_url($download_url) {
+    private function build_download_url($download_url, $zipname = null) {
+        // $download_url = $this->hub_url . $download_url;
+
         if (!empty($this->license_key)) {
-            return add_query_arg('key', $this->license_key, $download_url);
+            $download_url = add_query_arg('key', $this->license_key, $download_url);
+        }
+
+        if ($zipname !== null) {
+            $download_url = add_query_arg('zipname', $zipname, $download_url);
         }
 
         return $download_url;

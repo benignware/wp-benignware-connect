@@ -98,6 +98,7 @@ class ThemeInstall {
 
             foreach ($themes as $theme) {
                 if ($theme['slug'] === $theme_slug) {
+
                     return (object) [
                         'name' => $theme['name'],
                         'slug' => $theme['slug'],
@@ -132,7 +133,7 @@ class ThemeInstall {
             $api_url = add_query_arg('key', $key, $api_url);
         }
 
-        $response = wp_remote_get($api_url, ['timeout' => 50]);
+        $response = wp_remote_get($api_url, ['timeout' => 100]);
 
         if (is_wp_error($response)) {
             error_log('Error fetching themes from API: ' . $response->get_error_message());
@@ -150,6 +151,9 @@ class ThemeInstall {
         }
     }
 
+    /**
+     * Format the theme name by stripping 'wp-' prefix and capitalizing.
+     */
     private function format_theme_name($name) {
         // Check if the name starts with 'wp-' and is in hyphen-case
         if (strpos($name, 'wp-') === 0) {
@@ -161,19 +165,24 @@ class ThemeInstall {
         return $name;
     }
 
-
     /**
      * Format theme data for internal use.
      */
     private function format_theme_data($theme) {
+        // Remove 'wp-' prefix from the slug
+        $slug = sanitize_title($theme['name']);
+        $slug = str_replace('wp-', '', $slug);
+
+        $download_link = add_query_arg('zipname', $slug, $theme['download_link']);
+    
         return [
             'name' => $this->format_theme_name($theme['name']),
-            'slug' => sanitize_title($theme['name']),
+            'slug' => $slug,
             'screenshot' => $theme['screenshot'] ?? $this->default_screenshot_url,
             'author' => ['display_name' => $theme['author'] ?? ''],
             'description' => $theme['description'] ?? '',
             'version' => $theme['version'] ?? '',
-            'download_link' => $theme['download_link'] ?? '',
+            'download_link' => $download_link
         ];
     }
 }
