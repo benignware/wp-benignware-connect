@@ -1,6 +1,6 @@
 {
   "name": "benignware/wp-benignware-connect",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "type": "wordpress-plugin",
   "license": "MIT",
   "description": "Connects your WordPress site to Benignware's hub",
