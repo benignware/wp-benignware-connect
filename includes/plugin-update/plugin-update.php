@@ -33,7 +33,7 @@ class PluginUpdateManager {
                 $unprefixed_plugin_slug = str_replace('wp-', '', $plugin_slug);
                 $current_version = $plugin_data['Version'];
 
-                $update_info = $this->get_update_info('wp-' . $plugin_slug, $current_version);
+                $update_info = $this->get_update_info('wp-' . $unprefixed_plugin_slug, $current_version);
 
                 if ($update_info && version_compare($update_info->version, $current_version, '>')) {
                     $download_url = $this->build_download_url($update_info->download_url, $unprefixed_plugin_slug);
@@ -69,6 +69,8 @@ class PluginUpdateManager {
         if (!empty($license_key)) {
             $url = add_query_arg('key', $license_key, $url);
         }
+
+        $url = add_query_arg('zipname', $unprefixed_slug, $url);
 
         $response = wp_remote_get($url, ['timeout' => 15]);
         
