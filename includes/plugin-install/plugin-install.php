@@ -122,9 +122,6 @@ class PluginInstall {
                   <strong><?php _e('Last Updated:', 'benignware-connect'); ?></strong>
                   <?php echo esc_html($plugin->last_updated); ?>
               </div>
-              <div class="column-downloaded">
-                  <?php echo esc_html($plugin->downloads); ?>
-              </div>
               <div class="column-compatibility">
                   <span class="compatibility-compatible"><strong><?php _e('Compatible', 'benignware-connect'); ?></strong> <?php _e('with your WordPress version', 'benignware-connect'); ?></span>
               </div>
