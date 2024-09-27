@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Benignware Connect
  * Description: Connects your WordPress site to Benignware's hub
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Benignware
  */
 

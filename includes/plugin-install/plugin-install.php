@@ -3,6 +3,8 @@
 namespace benignware\wpconnect\Admin;
 
 class PluginInstall {
+    private $plugin_updates = null;
+    private $installed_plugins = null;
 
     public function __construct() {
         // Add the custom tab
@@ -32,6 +34,49 @@ class PluginInstall {
         }
     }
 
+    /**
+     * Cache installed plugins.
+     */
+    public function get_installed_plugins() {
+        if ($this->installed_plugins === null) {
+            $this->installed_plugins = get_plugins();
+        }
+
+        return $this->installed_plugins;
+    }
+
+    /**
+     * Cache plugin updates.
+     */
+    public function get_plugin_updates() {
+        if ($this->plugin_updates === null) {
+            $this->plugin_updates = get_site_transient('update_plugins');
+        }
+
+        return $this->plugin_updates;
+    }
+
+    public function is_installed($plugin) {
+        $installed_plugins = $this->get_installed_plugins();
+        return array_key_exists($plugin->slug . '/' . $plugin->slug . '.php', $installed_plugins);
+    }
+
+    public function has_update($plugin) {
+        $installed_plugins = $this->get_installed_plugins();
+        $plugin_updates_response = $this->get_plugin_updates();
+        $plugin_updates = isset($plugin_updates_response->response) ? $plugin_updates_response->response : [];
+
+        $plugin_file = $plugin->slug . '/' . $plugin->slug . '.php';
+
+        // Check if the plugin is installed
+        $is_installed = array_key_exists($plugin->slug . '/' . $plugin->slug . '.php', $installed_plugins);
+
+        // Check for available updates
+        $has_update = $is_installed && isset($plugin_updates[$plugin_file]);
+
+        return $has_update;
+    }
+
     public function add_custom_tab($tabs) {
         $tabs['benignware'] = __('Benignware', 'benignware-connect');
         return $tabs;
@@ -53,8 +98,15 @@ class PluginInstall {
                 <div class="wp-list-table widefat plugin-install">
                     <?php
                     $plugins = $this->fetch_plugins_from_api();
+
+                    
+
                     if (!empty($plugins)) {
                         foreach ($plugins as $plugin) {
+                            // echo '<pre>';
+                            // print_r($plugin);
+                            // echo '</pre>';
+                            // echo '<br>';
                             $this->render_plugin_card($plugin);
                         }
                     } else {
@@ -77,58 +129,86 @@ class PluginInstall {
     }
 
     private function render_plugin_card($plugin) {
-      
-      $install_url = $this->generate_install_url($plugin->slug);
-      // Set the fallback image (WordPress logo)
-      $fallback_icon_url = includes_url('images/w-logo-blue.png');
-      // Use the plugin's icon_url if available, otherwise use the fallback image
-      $icon_url = !empty($plugin->icon_url) ? esc_url($plugin->icon_url) : esc_url($fallback_icon_url);
-      ?>
-      <div class="plugin-card plugin-card-<?php echo esc_attr($plugin->slug); ?>">
-          <div class="plugin-card-top">
-              <div class="name column-name">
-                  <h3>
-                  <a href="<?php echo esc_url(network_admin_url('plugin-install.php?tab=plugin-information&plugin=' . $plugin->slug . '&TB_iframe=true&width=600&height=550')); ?>" class="thickbox open-plugin-details-modal" aria-label="<?php _e('More details', 'benignware-connect'); ?>" data-title="<?php echo esc_attr($plugin->name); ?>">
-                          <?php echo esc_html($plugin->name); ?>
-                          <img src="<?php echo $icon_url; ?>" class="plugin-icon" alt="">
-                      </a>
-                  </h3>
-              </div>
-              <div class="action-links">
-                  <ul class="plugin-action-buttons">
-                      <li>
-                          <a class="install-now button" data-slug="<?php echo esc_attr($plugin->slug); ?>" href="<?php echo esc_url($install_url); ?>" aria-label="<?php echo esc_attr($plugin->aria_label); ?>" role="button">
-                              <?php _e('Install Now', 'benignware-connect'); ?>
-                          </a>
-                      </li>
-                      <li>
-                      <a href="<?php echo esc_url(network_admin_url('plugin-install.php?tab=plugin-information&plugin=' . $plugin->slug . '&TB_iframe=true&width=600&height=550')); ?>" class="thickbox open-plugin-details-modal" aria-label="<?php _e('More details', 'benignware-connect'); ?>" data-title="<?php echo esc_attr($plugin->name); ?>">
-                          <?php _e('More Details', 'benignware-connect'); ?>
-                      </a>
+        $install_url = $this->generate_install_url($plugin->slug);
 
-                      </li>
-                  </ul>
-              </div>
-              <div class="desc column-description">
-                  <p><?php echo esc_html($plugin->description); ?></p>
-                  <p class="authors"> <cite><?php _e('By', 'benignware-connect'); ?> <a href="<?php echo esc_url($plugin->author_url); ?>"><?php echo esc_html($plugin->author); ?></a></cite></p>
-              </div>
-          </div>
-          <div class="plugin-card-bottom">
-              <div class="vers column-rating">
-                  <!-- Add rating stars here if available -->
-              </div>
-              <div class="column-updated">
-                  <strong><?php _e('Last Updated:', 'benignware-connect'); ?></strong>
-                  <?php echo esc_html($plugin->last_updated); ?>
-              </div>
-              <div class="column-compatibility">
-                  <span class="compatibility-compatible"><strong><?php _e('Compatible', 'benignware-connect'); ?></strong> <?php _e('with your WordPress version', 'benignware-connect'); ?></span>
-              </div>
-          </div>
-      </div>
-      <?php
-  }
+        $installed_plugins = $this->get_installed_plugins();
+        $plugin_updates = $this->get_plugin_updates(); 
+        
+        // Check if the plugin is installed
+        $is_installed = $this->is_installed($plugin);
+
+        // Check for available updates
+        $has_update = $this->has_update($plugin);
+    
+        // Set the fallback image (WordPress logo)
+        $fallback_icon_url = includes_url('images/w-logo-blue.png');
+        // Use the plugin's icon_url if available, otherwise use the fallback image
+        $icon_url = !empty($plugin->icon_url) ? esc_url($plugin->icon_url) : esc_url($fallback_icon_url);
+
+        $plugin_file = $plugin->slug . '/' . $plugin->slug . '.php';
+
+        ?>
+        <div class="plugin-card plugin-card-<?php echo esc_attr($plugin->slug); ?>">
+            <div class="plugin-card-top">
+                <div class="name column-name">
+                    <h3>
+                        <a href="<?php echo esc_url(network_admin_url('plugin-install.php?tab=plugin-information&plugin=' . $plugin->slug . '&TB_iframe=true&width=600&height=550')); ?>" class="thickbox open-plugin-details-modal" aria-label="<?php _e('More details', 'benignware-connect'); ?>" data-title="<?php echo esc_attr($plugin->name); ?>">
+                            <?php echo esc_html($plugin->name); ?>
+                            <img src="<?php echo $icon_url; ?>" class="plugin-icon" alt="">
+                        </a>
+                    </h3>
+                </div>
+                <div class="action-links">
+                    <ul class="plugin-action-buttons">
+                        <li>
+                            <?php if ($is_installed): ?>
+                                <?php if ($has_update): ?>
+                                    <a class="update-now button aria-button-if-js" 
+                                        data-plugin="<?php echo esc_attr($plugin_file); ?>" 
+                                        data-slug="<?php echo esc_attr($plugin->slug); ?>" 
+                                        href="<?php echo esc_url(network_admin_url('update.php?action=upgrade-plugin&plugin=' . $plugin_file . '&_wpnonce=' . wp_create_nonce('upgrade-plugin_' . $plugin_file))); ?>" 
+                                        aria-label="<?php printf(__('Update %s now', 'benignware-connect'), esc_html($plugin->name)); ?>" 
+                                        role="button">
+                                            <?php _e('Update Now', 'benignware-connect'); ?>
+                                    </a>
+                                <?php else: ?>
+                                    <button type="button" class="button button-disabled" disabled="disabled"><?php _e('Active', 'benignware-connect'); ?></button>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <a class="install-now button" data-slug="<?php echo esc_attr($plugin->slug); ?>" href="<?php echo esc_url($install_url); ?>" aria-label="<?php echo esc_attr($plugin->aria_label); ?>" role="button">
+                                    <?php _e('Install Now', 'benignware-connect'); ?>
+                                </a>
+                            <?php endif; ?>
+                        </li>
+                        <li>
+                            <a href="<?php echo esc_url(network_admin_url('plugin-install.php?tab=plugin-information&plugin=' . $plugin->slug . '&TB_iframe=true&width=600&height=550')); ?>" class="thickbox open-plugin-details-modal" aria-label="<?php _e('More details', 'benignware-connect'); ?>" data-title="<?php echo esc_attr($plugin->name); ?>">
+                                <?php _e('More Details', 'benignware-connect'); ?>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="desc column-description">
+                    <p><?php echo esc_html($plugin->description); ?></p>
+                    <p class="authors"> <cite><?php _e('By', 'benignware-connect'); ?> <a href="<?php echo esc_url($plugin->author_url); ?>"><?php echo esc_html($plugin->author); ?></a></cite></p>
+                </div>
+            </div>
+            <div class="plugin-card-bottom">
+                <div class="vers column-rating">
+                    <!-- Add rating stars here if available -->
+                </div>
+                <div class="column-updated">
+                    <strong><?php _e('Last Updated:', 'benignware-connect'); ?></strong>
+                    <?php echo esc_html($plugin->last_updated); ?>
+                </div>
+                <div class="column-compatibility">
+                    <span class="compatibility-compatible"><strong><?php _e('Compatible', 'benignware-connect'); ?></strong> <?php _e('with your WordPress version', 'benignware-connect'); ?></span>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+    
+    
   
   public function plugin_api_handler($false, $action, $args) {
 
@@ -136,6 +216,9 @@ class PluginInstall {
     if ($action === 'query_plugins' && isset($args->slug) && $args->slug === 'benignware') {
         // Fetch and return the list of formatted plugins for 'benignware'
         $plugins = $this->fetch_plugins_from_api();
+
+        print_r($plugins);
+        exit;
         return (object) [
             'plugins' => $plugins
         ];
@@ -146,12 +229,14 @@ class PluginInstall {
         $plugin_slug = sanitize_title($args->slug);
         $plugins = $this->fetch_plugins_from_api();
 
+       
+
         // Check if the requested plugin is one of your own
         foreach ($plugins as $plugin) {
 
             if (sanitize_title($plugin->slug) === $plugin_slug) {
                 // Return plugin information for your own plugin
-
+                echo 'PLUGIN FOUND: ' . $plugin->name;
 
                 return (object) [
                     'name' => $plugin->name,
@@ -216,8 +301,6 @@ class PluginInstall {
         ];
     }
     
-
-
     private function fetch_plugins_from_api() {
         $api_url = 'https://hub.benignware.com/api/v1/packages/index?filter=wp-&keywords=wordpress-plugin';
         $key = get_option('benignware_license_key'); // Assuming you store the license key in an option
