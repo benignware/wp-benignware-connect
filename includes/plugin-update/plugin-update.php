@@ -86,7 +86,7 @@ class PluginUpdateManager {
 
         if (isset($response_body->download_url)) {
             $download_url = $response_body->download_url;
-            $response_body->download_url = add_query_arg('zipname', $unprefixed_slug, $url);
+            $response_body->download_url = add_query_arg('zipname', $unprefixed_slug, $download_url);
         }
         
         return isset($response_body->version) ? $response_body : null;
