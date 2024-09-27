@@ -81,6 +81,11 @@ class ThemeUpdateManager {
 
         $response_body = json_decode(wp_remote_retrieve_body($response));
 
+        if (isset($response_body->download_url)) {
+            $download_url = $response_body->download_url;
+            $response_body->download_url = add_query_arg('zipname', $unprefixed_slug, $url);
+        }
+
         return isset($response_body->version) ? $response_body : null;
     }
 
