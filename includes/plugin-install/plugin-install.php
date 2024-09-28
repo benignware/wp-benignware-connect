@@ -229,15 +229,10 @@ class PluginInstall {
         $plugin_slug = sanitize_title($args->slug);
         $plugins = $this->fetch_plugins_from_api();
 
-       
-
         // Check if the requested plugin is one of your own
         foreach ($plugins as $plugin) {
 
             if (sanitize_title($plugin->slug) === $plugin_slug) {
-                // Return plugin information for your own plugin
-                echo 'PLUGIN FOUND: ' . $plugin->name;
-
                 return (object) [
                     'name' => $plugin->name,
                     'slug' => $plugin->slug,
